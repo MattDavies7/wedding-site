@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# ignore any token or secrets
+token
+a/token
+*.token
+.env
+node_modules
+dist
+*.log

@@ -1,20 +1,15 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import Home from './pages/Home'
-import Login from './pages/Login'
-
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import GuestDashboard from "./pages/GuestDashboard";
 
 function App() {
   return (
-    <Routes>
-      {/* Home page */}
-      <Route path="/" element={<Home />} />
-
-      {/* Login Page */}
-      <Route path="/Login" element={<Login />} />
-
-      {/* Fallback for unknown routes */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/guest-dashboard" element={<GuestDashboard />} />
+      </Routes>
   );
 }
 

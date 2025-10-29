@@ -1,83 +1,83 @@
-import express from "express";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import pkg from "pg";
-import dotenv from "dotenv";
+import express from "express"
+import nodemailer from "nodemailer"
 
-dotenv.config();
-const { Pool } = pkg;
-const router = express.Router();
+const router = express.Router()
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Store email -> { code, expiresAt }
+const codes = new Map()
 
-const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+// Generate 6-digit code and send email
+router.post("/send-code", async (req, res) => {
+  const { email } = req.body
 
-/* ------------------- REGISTER ------------------- */
-router.post("/register", async (req, res) => {
-  const { name, email, password, role } = req.body;
+  // Generate random 6-digit number as string
+  const code = Math.floor(100000 + Math.random() * 900000).toString()
+
+  // Code expires 5 minutes from now
+  const expiresAt = Date.now() + 5 * 60 * 1000
+  codes.set(email, { code, expiresAt })
+
+  // Setup email transport
+  const transporter = nodemailer.createTransport({
+    service: "gmail", // or another email provider
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+
   try {
-    const hashed = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, role`,
-      [name, email, hashed, role || "guest"]
-    );
-    res.status(201).json({ message: "User registered", user: result.rows[0] });
+    await transporter.sendMail({
+      from: '"Wedding Website" <no-reply@wedding.com>',
+      to: email,
+      subject: "Your Wedding Website Login Code",
+      text: `Your 6-digit login code is: ${code}\n\nThis code will expire in 5 minutes.`,
+    })
+
+    console.log(`Code ${code} sent to ${email}`)
+
+    res.json({ success: true })
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Registration failed" });
+    console.error("Email send failed:", err)
+    res.json({ success: false, message: "Failed to send code" })
   }
-});
+})
 
-/* -------------------- LOGIN -------------------- */
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+// Verify the code
+router.post("/verify-code", (req, res) => {
+  const { email, code } = req.body
+  const record = codes.get(email)
 
-  // --- TEMPORARY TEST LOGIN (bypass DB for now) ---
-  if (email === "guest@example.com" && password === "password123") {
-    const token = jwt.sign(
-      { name: "Wedding Guest Test User", email, role: "guest" },
-      JWT_SECRET,
-      { expiresIn: "2h" }
-    );
-    return res.json({ message: "Login successful (test user)", token, role: "guest" });
+  if (!record) {
+    return res.json({ success: false, message: "No code found. Please request a new one." })
   }
 
-  // --- Normal DB login ---
-  try {
-    const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
-    const user = rows[0];
-    if (!user) return res.status(400).json({ error: "Invalid email or password" });
+  const { code: validCode, expiresAt } = record
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(400).json({ error: "Invalid email or password" });
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.json({ message: "Login successful", token, role: user.role });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Login failed" });
+  // Check expiry
+  if (Date.now() > expiresAt) {
+    codes.delete(email)
+    return res.json({ success: false, message: "Code expired. Please request a new one." })
   }
-});
 
-/* -------------------- VERIFY -------------------- */
-router.get("/verify", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: "No token provided" });
+  // Check if code matches
+  if (code === validCode) {
+    codes.delete(email) // one-time use
+    console.log(`✅ ${email} successfully logged in`)
+    return res.json({ success: true })
+  }
 
-  const token = authHeader.split(" ")[1];
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ message: "Invalid token" });
-    res.json({ user: decoded });
-  });
-});
+  res.json({ success: false, message: "Invalid code." })
+})
 
-export default router;
+// Background cleanup every 10 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [email, { expiresAt }] of codes) {
+    if (now > expiresAt) {
+      codes.delete(email)
+    }
+  }
+}, 10 * 60 * 1000)
+
+export default router

@@ -1,3 +1,7 @@
+# --------------------------------------------------------
+# 🔒 General Project Ignore File — wedding-site
+# --------------------------------------------------------
+
 # Logs
 logs
 *.log
@@ -7,26 +11,40 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+
+# Local environment files
+.env
+backend/.env
 *.local
 
-# Editor directories and files
+# IDE / Editor
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-# ignore any token or secrets
+
+# Sensitive tokens or secrets
 token
 a/token
 *.token
-.env
-node_modules
-dist
-*.log
+tolken.txt
+
+# Prisma
+prisma/dev.db
+
+# Misc
+tmp/
+.cache/

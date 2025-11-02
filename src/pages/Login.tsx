@@ -1,93 +1,104 @@
-import { useEffect, useRef, useState } from "react"
-import Navbar from "../components/Navbar"
+import { useEffect, useRef, useState } from "react";
+import Navbar from "../components/Navbar";
 
-type Step = "email" | "code"
+type Step = "email" | "code";
 
 export default function Login() {
-  const [step, setStep] = useState<Step>("email")
-  const [email, setEmail] = useState("")
-  const [code, setCode] = useState("")
-  const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null)
-  const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [message, setMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
+  const [loading, setLoading] = useState(false);
 
   // resend timer
-  const [cooldown, setCooldown] = useState(0)
-  const timerRef = useRef<number | null>(null)
+  const [cooldown, setCooldown] = useState(0);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0 && timerRef.current) {
-      window.clearInterval(timerRef.current)
-      timerRef.current = null
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-  }, [cooldown])
+  }, [cooldown]);
 
   const startCooldown = (secs = 60) => {
-    setCooldown(secs)
-    if (timerRef.current) window.clearInterval(timerRef.current)
+    setCooldown(secs);
+    if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = window.setInterval(() => {
-      setCooldown((s) => s - 1)
-    }, 1000)
-  }
+      setCooldown((s) => s - 1);
+    }, 1000);
+  };
 
   const sendCode = async () => {
-    setMessage(null)
+    setMessage(null);
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      setMessage({ type: "error", text: "Please enter a valid email address." })
-      return
+      setMessage({ type: "error", text: "Please enter a valid email address." });
+      return;
     }
     try {
-      setLoading(true)
+      setLoading(true);
       const res = await fetch("http://localhost:5000/api/auth/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (data.success) {
-        setStep("code")
-        setMessage({ type: "success", text: "We’ve sent a 6-digit code to your email." })
-        startCooldown(60)
+        setStep("code");
+        setMessage({ type: "success", text: "We’ve sent a 6-digit code to your email." });
+        startCooldown(60);
       } else {
-        setMessage({ type: "error", text: data.message || "Could not send code. Try again." })
+        setMessage({ type: "error", text: data.message || "Could not send code. Try again." });
       }
     } catch {
-      setMessage({ type: "error", text: "Network error. Please try again." })
+      setMessage({ type: "error", text: "Network error. Please try again." });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const verifyCode = async () => {
-    setMessage(null)
-    if (!/^\d{6}$/.test(code)) {
-      setMessage({ type: "error", text: "Enter the 6-digit code we emailed you." })
-      return
+    setMessage(null);
+
+    // 🧩 ADMIN OVERRIDE LOGIN
+    if (email === "Admin" && code === "Admin57") {
+      localStorage.setItem("token", "admin");
+      setMessage({ type: "success", text: "Welcome, Admin!" });
+      window.location.href = "/guestdashboard"; // change to /admin-dashboard later
+      return;
     }
+
+    // 🧩 NORMAL GUEST LOGIN FLOW
+    if (!/^\d{6}$/.test(code)) {
+      setMessage({ type: "error", text: "Enter the 6-digit code we emailed you." });
+      return;
+    }
+
     try {
-      setLoading(true)
+      setLoading(true);
       const res = await fetch("http://localhost:5000/api/auth/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (data.success) {
-        // TODO: set a real session (JWT/cookie). For demo, just redirect:
-        window.location.href = "/guestdashboard"
+        localStorage.setItem("token", data.token);
+        window.location.href = "/guestdashboard";
       } else {
-        setMessage({ type: "error", text: data.message || "Invalid or expired code." })
+        setMessage({ type: "error", text: data.message || "Invalid or expired code." });
       }
     } catch {
-      setMessage({ type: "error", text: "Network error. Please try again." })
+      setMessage({ type: "error", text: "Network error. Please try again." });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const resend = async () => {
-    if (cooldown > 0) return
-    await sendCode()
-  }
+    if (cooldown > 0) return;
+    await sendCode();
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-orange-50">
@@ -117,8 +128,8 @@ export default function Login() {
             {step === "email" && (
               <form
                 onSubmit={(e) => {
-                  e.preventDefault()
-                  sendCode()
+                  e.preventDefault();
+                  sendCode();
                 }}
               >
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -128,7 +139,7 @@ export default function Login() {
                   id="email"
                   type="email"
                   autoComplete="email"
-                  className="w-full rounded-md border border-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 bg-white px-3 py-2 outline-none"
+                   className="w-full rounded-md border border-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 bg-white text-gray-900 placeholder-gray-400 caret-orange-500 px-3 py-2 outline-none"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -145,7 +156,7 @@ export default function Login() {
                   <a href="/register" className="block text-orange-700 hover:underline">
                     Create an Account
                   </a>
-                  <a href="/login-password" className="block text-grey-600 hover:text-grey-800">
+                  <a href="/login-password" className="block text-gray-600 hover:text-gray-800">
                     Use password instead
                   </a>
                 </div>
@@ -155,8 +166,8 @@ export default function Login() {
             {step === "code" && (
               <form
                 onSubmit={(e) => {
-                  e.preventDefault()
-                  verifyCode()
+                  e.preventDefault();
+                  verifyCode();
                 }}
               >
                 <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
@@ -167,8 +178,7 @@ export default function Login() {
                   inputMode="numeric"
                   pattern="\d{6}"
                   maxLength={6}
-                  className="w-full tracking-widest text-center text-lg rounded-md border border-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 bg-white px-3 py-2 outline-none"
-                  placeholder="••••••"
+                  className="w-full tracking-widest text-center text-lg rounded-md border border-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 bg-white text-gray-900 placeholder-gray-400 caret-orange-500 px-3 py-2 outline-none"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 />
@@ -219,5 +229,5 @@ export default function Login() {
         </div>
       </main>
     </div>
-  )
+  );
 }

@@ -19,7 +19,7 @@ export default function HeroSection() {
           <span className="block">Matthew</span>
         </h1>
         <p className="mt-6 text-lg md:text-xl text-gray-200 font-light">
-          Wedding date goes here
+          22/07/2028 - Beamish Hall
         </p>
       </div>
     </section>

@@ -31,10 +31,28 @@ export default function Login() {
 
   const sendCode = async () => {
     setMessage(null);
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      setMessage({ type: "error", text: "Please enter a valid email address." });
+
+
+    // Allows Admin bypass without email validation
+    if (email === "Admin") {
+      setStep("code");
+      setMessage({
+        type: "success",
+        text: "Admin login detected - please enter admin special code",
+      });
       return;
     }
+
+    // Normal guest email validation
+
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      setMessage({
+        type: "error",
+        text: "Please enter a valid email address."
+      })
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await fetch("http://localhost:5000/api/auth/send-code", {
@@ -58,42 +76,44 @@ export default function Login() {
   };
 
   const verifyCode = async () => {
-    setMessage(null);
+  setMessage(null);
 
-    // 🧩 ADMIN OVERRIDE LOGIN
-    if (email === "Admin" && code === "Admin57") {
-      localStorage.setItem("token", "admin");
-      setMessage({ type: "success", text: "Welcome, Admin!" });
-      window.location.href = "/guestdashboard"; // change to /admin-dashboard later
-      return;
-    }
+  // 🧩 ADMIN OVERRIDE LOGIN
+  if (email === "Admin" && code === "Admin57") {
+    localStorage.setItem("token", "admin");
+    setMessage({ type: "success", text: "Welcome, Admin!" });
+    window.location.href = "/guest-dashboard"; // later: change to /admin-dashboard
+    return;
+  }
 
-    // 🧩 NORMAL GUEST LOGIN FLOW
-    if (!/^\d{6}$/.test(code)) {
-      setMessage({ type: "error", text: "Enter the 6-digit code we emailed you." });
-      return;
-    }
+  // 🧩 NORMAL GUEST LOGIN FLOW
+  if (!/^\d{6}$/.test(code)) {
+    setMessage({ type: "error", text: "Enter the 6-digit code we emailed you." });
+    return;
+  }
 
-    try {
-      setLoading(true);
-      const res = await fetch("http://localhost:5000/api/auth/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem("token", data.token);
-        window.location.href = "/guestdashboard";
-      } else {
-        setMessage({ type: "error", text: data.message || "Invalid or expired code." });
-      }
-    } catch {
-      setMessage({ type: "error", text: "Network error. Please try again." });
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    const res = await fetch("http://localhost:5000/api/auth/verify-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem("token", data.token);
+      window.location.href = "/guest-dashboard";
+    } else {
+      setMessage({ type: "error", text: data.message || "Invalid or expired code." });
     }
-  };
+  } catch {
+    setMessage({ type: "error", text: "Network error. Please try again." });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const resend = async () => {
     if (cooldown > 0) return;
@@ -137,7 +157,7 @@ export default function Login() {
                 </label>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   autoComplete="email"
                    className="w-full rounded-md border border-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 bg-white text-gray-900 placeholder-gray-400 caret-orange-500 px-3 py-2 outline-none"
                   placeholder="you@example.com"
@@ -175,12 +195,10 @@ export default function Login() {
                 </label>
                 <input
                   id="code"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
+                  type="text"
                   className="w-full tracking-widest text-center text-lg rounded-md border border-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 bg-white text-gray-900 placeholder-gray-400 caret-orange-500 px-3 py-2 outline-none"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => setCode(e.target.value)}
                 />
 
                 <button

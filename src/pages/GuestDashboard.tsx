@@ -1,174 +1,175 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import Navbar from "../components/Navbar";
 
-const GuestDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [file, setFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    fetch("http://localhost:4000/api/auth/verify", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Unauthorized");
-        const data = await res.json();
-        setUser(data.user);
-      })
-      .catch(() => navigate("/login"));
-  }, [navigate]);
-
-  const handleUpload = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPhotos((prev) => [...prev, reader.result as string]);
-    reader.readAsDataURL(file);
-    setFile(null);
-  };
-
-  if (!user) {
-    return (
-      <div className="text-center mt-10 text-xl">Loading your dashboard...</div>
-    );
-  }
-
+export default function GuestDashboard() {
   return (
-    <div className="min-h-screen bg-orange-100 text-gray-800 flex flex-col">
-      {/* 1️⃣ Navbar + Welcome */}
-      <nav className="bg-white shadow-md py-4 px-8 flex justify-between items-center">
-        <h1 className="text-2xl font-serif">Lester & Matthew</h1>
-        <button
-          onClick={() => {
-            localStorage.removeItem("token");
-            navigate("/login");
-          }}
-          className="text-sm text-gray-600 hover:text-gray-900"
-        >
-          Logout
-        </button>
-      </nav>
+    <div className="bg-orange-50 min-h-screen text-gray-800 scroll-smooth">
+      {/* 🧭 Navbar */}
+      <Navbar />
 
-      <header className="text-center py-12 bg-orange-50 shadow-inner">
-        <h2 className="text-3xl font-bold">Welcome, {user.name || "Guest"}!</h2>
-        <p className="text-gray-600 mt-2">
-          We’re so happy to have you celebrating with us. Scroll down to RSVP,
-          upload memories, and more!
+      {/* 1️⃣ Welcome Section */}
+  <section
+  id="welcome"
+  className="relative flex flex-col items-center text-center min-h-[90vh] bg-cover bg-center"
+  style={{
+    backgroundImage: "url('/Img/Lester & Matthew-40.jpg')", // replace with your own image
+  }}
+>
+  <div className="absolute inset-0 bg-black/30"></div>
+
+  {/*  Content wrapper positioned near top */}
+  <div className="relative z-10 text-white px-6 mt-[8vh] sm:mt-[10vh] md:mt-[12vh] flex flex-col items-center">
+    <h1 className="text-5xl font-serif mb-4 drop-shadow-lg">
+      Welcome to Our Wedding!
+    </h1>
+    <a
+      href="#rsvp"
+      className="bg-orange-400 hover:bg-orange-500 transition text-white font-semibold px-6 py-3 rounded-full shadow-lg"
+    >
+      Scroll to RSVP ↓
+    </a>
+  </div>
+</section>
+
+{/* 2️⃣ RSVP Section */}
+<section
+  id="rsvp"
+  className="py-20 bg-orange-100 text-center flex flex-col items-center"
+>
+  <h2 className="text-3xl font-serif mb-8 text-gray-800">RSVP</h2>
+  <form
+    onSubmit={async (e) => {
+      e.preventDefault();
+      const name = (e.target as any).name.value;
+      const attending = (e.target as any).attending.value === "yes";
+
+      try {
+        const res = await fetch("http://localhost:5000/api/rsvp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, attending }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert("✅ RSVP submitted successfully!");
+          (e.target as HTMLFormElement).reset();
+        } else {
+          alert("❌ There was a problem submitting your RSVP.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("❌ Could not connect to the server.");
+      }
+    }}
+    className="bg-white/90 shadow-md rounded-2xl p-8 w-[90%] max-w-md border border-orange-200"
+  >
+    <label className="block text-left mb-2 text-gray-700">Full Name</label>
+    <input
+      type="text"
+      name="name"
+      className="w-full border border-gray-300 rounded-md p-3 mb-4 focus:ring-2 focus:ring-orange-300 outline-none"
+      placeholder="Your Name"
+      required
+    />
+
+    <label className="block text-left mb-2 text-gray-700">Will you attend?</label>
+    <select
+      name="attending"
+      className="w-full border border-gray-300 rounded-md p-3 mb-6 focus:ring-2 focus:ring-orange-300 outline-none"
+    >
+      <option value="yes">Yes, can’t wait!</option>
+      <option value="no">Sadly can’t make it</option>
+    </select>
+
+    <button
+      type="submit"
+      className="w-full bg-orange-400 hover:bg-orange-500 text-white py-3 rounded-lg shadow transition"
+    >
+      Submit RSVP
+    </button>
+  </form>
+</section>
+
+
+      {/* 3️⃣ Photo Upload & Gallery */}
+      <section
+        id="gallery"
+        className="py-20 bg-white text-center flex flex-col items-center"
+      >
+        <h2 className="text-3xl font-serif mb-8 text-gray-800">
+          Share Your Photos
+        </h2>
+        <p className="max-w-lg mb-6 text-gray-600">
+          Upload your favorite moments from the night and relive them with everyone.
         </p>
-      </header>
 
-      {/* 2️⃣ RSVP Form */}
-      <section id="rsvp" className="py-16 bg-white text-center">
-        <h3 className="text-2xl font-serif mb-6">RSVP</h3>
-        <form className="max-w-md mx-auto space-y-4">
-          <input
-            type="text"
-            placeholder="Your full name"
-            className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-orange-300"
-          />
-          <select className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-orange-300">
-            <option>Will attend</option>
-            <option>Will not attend</option>
-          </select>
-          {/* future: meal choice dropdown */}
-          <button
-            type="submit"
-            className="bg-orange-400 text-white font-semibold px-6 py-2 rounded-md hover:bg-orange-500 transition"
-          >
-            Submit RSVP
-          </button>
-        </form>
-      </section>
-
-      {/* 3️⃣ Photo Upload + Gallery */}
-      <section id="gallery" className="py-16 bg-orange-50 text-center">
-        <h3 className="text-2xl font-serif mb-6">Share Your Photos</h3>
-        <form
-          onSubmit={handleUpload}
-          className="max-w-md mx-auto mb-8 flex flex-col items-center gap-4"
+        {/* Upload Button (not functional yet) */}
+        <button
+          disabled
+          className="bg-orange-400 text-white px-6 py-3 rounded-lg shadow hover:bg-orange-500 disabled:opacity-60"
         >
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="w-full border border-gray-300 rounded-md p-2 bg-white"
-          />
-          <button
-            type="submit"
-            className="bg-orange-400 text-white px-5 py-2 rounded-md hover:bg-orange-500 transition"
-          >
-            Upload
-          </button>
-        </form>
+          Upload Photos (Coming Soon)
+        </button>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 px-6">
-          {photos.length === 0 && (
-            <p className="col-span-full text-gray-600">
-              No photos uploaded yet — be the first!
-            </p>
-          )}
-          {photos.map((src, idx) => (
-            <img
-              key={idx}
-              src={src}
-              alt={`guest upload ${idx}`}
-              className="rounded-lg shadow-md object-cover w-full h-40"
-            />
-          ))}
+        {/* Small Scrollable Gallery */}
+        <div className="mt-10 w-full overflow-x-auto">
+          <div className="flex gap-4 px-6 pb-4">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div
+                key={n}
+                className="min-w-[200px] h-[150px] rounded-xl bg-orange-200/50 border border-orange-100 flex items-center justify-center text-gray-500 font-medium"
+              >
+                Photo {n}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* 4️⃣ Additional FAQs */}
-      <section id="faq" className="py-16 bg-white text-center">
-        <h3 className="text-2xl font-serif mb-8">Guest FAQs</h3>
-        <div className="max-w-2xl mx-auto text-left">
-          {[
-            {
-              q: "When should I arrive?",
-              a: "We recommend arriving 30 minutes before the ceremony begins.",
-            },
-            {
-              q: "Where can I park?",
-              a: "Parking is available on-site — follow signs for guests.",
-            },
-            {
-              q: "Is there a dress code?",
-              a: "Formal attire, but comfortable enough for dancing!",
-            },
-          ].map((f, i) => (
-            <details
-              key={i}
-              className="border border-orange-200 bg-white/70 mb-4 p-5 rounded-md shadow-sm hover:bg-white/90 transition"
-            >
-              <summary className="font-semibold cursor-pointer text-gray-900">
-                {f.q}
-              </summary>
-              <p className="mt-3 text-gray-700">{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      {/* 4️⃣ FAQ Section */}
+      <section
+  id="faq"
+  className="py-20 bg-orange-100 text-center flex flex-col items-center"
+>
+  <h2 className="text-3xl font-serif mb-8 text-gray-800">FAQs</h2>
+  <div className="max-w-2xl w-[90%] text-left space-y-4">
+    {[
+      {
+        q: "What should I wear?",
+        a: "Dress code: Summer formal – think elegant but comfortable!",
+      },
+      {
+        q: "Are kids invited?",
+        a: "We love your little ones, but this will be an adults-only celebration.",
+      },
+      {
+        q: "Where should I stay?",
+        a: "Nearby hotels and Airbnb options are available — check the invite for recommendations.",
+      },
+      {
+        q: "When should I arrive?",
+        a: "The ceremony begins at 2 PM — please aim to arrive by 1:30 PM.",
+      },
+    ].map((faq, i) => (
+      <details
+        key={i}
+        className="bg-white rounded-lg p-4 shadow-sm border border-orange-200"
+      >
+        <summary className="font-semibold text-gray-800 cursor-pointer">
+          {faq.q}
+        </summary>
+        <p className="mt-2 text-gray-600">{faq.a}</p>
+      </details>
+    ))}
+  </div>
+</section>
+
 
       {/* 5️⃣ Footer */}
-      <footer className="py-8 bg-orange-100 text-center text-gray-700 border-t border-orange-200">
-        <p>Lester & Matthew — © 2026</p>
-        <a
-          href="#top"
-          className="text-blue-600 hover:underline block mt-2 text-sm"
-        >
-          Back to top
-        </a>
+      <footer className="py-10 bg-orange-400 text-white text-center">
+        <p className="font-serif text-md">Matthew &amp; Lester</p>
       </footer>
     </div>
   );
-};
-
-export default GuestDashboard;
+}

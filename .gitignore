@@ -48,3 +48,5 @@ prisma/dev.db
 # Misc
 tmp/
 .cache/
+
+/src/generated/prisma

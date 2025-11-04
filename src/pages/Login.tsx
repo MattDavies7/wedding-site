@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
+import { useNavigate } from "react-router-dom";
 
 type Step = "email" | "code";
 
+
+
 export default function Login() {
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -82,7 +86,7 @@ export default function Login() {
   if (email === "Admin" && code === "Admin57") {
     localStorage.setItem("token", "admin");
     setMessage({ type: "success", text: "Welcome, Admin!" });
-    window.location.href = "/guest-dashboard"; // later: change to /admin-dashboard
+    navigate("/admin/dashboard"); // later: changed to /admin-dashboard from guest
     return;
   }
 
